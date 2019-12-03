@@ -1,0 +1,51 @@
+import org.apache.spark._
+import org.apache.spark.sql._
+import org.apache.log4j._
+import org.apache.spark.sql.types.{StructType, StructField, StringType}
+import org.apache.spark.sql.Row
+
+object textfileReader {
+ 
+ // Reducing the error level to just "ERROR" messages
+  // It uses library org.apache.log4j._
+  // You can apply other logging levels like ALL, DEBUG, ERROR, INFO, FATAL, OFF etc
+  Logger.getLogger("org").setLevel(Level.ERROR)
+ 
+ // Defining Spark configuration to set application name and master
+  // It uses library org.apache.spark._ 
+  val conf = new SparkConf().setAppName("textfileReader")
+  conf.setMaster("local")
+  
+
+  // Using above configuration to define our SparkContext
+  val sc = new SparkContext(conf)
+ 
+  // Defining SQL context to run Spark SQL
+  // It uses library org.apache.spark.sql._
+  val sqlContext = new SQLContext(sc)
+  
+   // Main function
+  def main (args:Array[String]): Unit = {
+
+  // Reading the text file
+val temparatureString = sc.textFile("../ml-100k/stockholm_daily_temp_obs_1756_1858_t1t2t3.txt")
+
+// Defining the data-frame header structure
+val temparatureHeader = "year month day morn_temp noon_temp eve_temp"
+
+// Defining schema from header which we defined above
+val schema = StructType(temparatureHeader.split(" ").map(fieldName => StructField(fieldName,StringType, true)))
+
+// Converting String RDD to Row RDD for 6 attributes after clensing the data.
+val rowRDD = temparatureString.map(_.split("\\s+")).map(x => Row(x(1), x(2), x(3), x(4), x(5), x(6)))
+ 
+ // Creating data-frame based on Row RDD and schema
+    val temparatureDF = sqlContext.createDataFrame(rowRDD, schema)
+	
+	 // Saving as temporary table
+    temparatureDF.registerTempTable("temp_temparature")
+	
+	 // Retrieving all the records
+    val allrecords = sqlContext.sql("select * from temp_temparature")
+	allrecords.show(5)
+}}
